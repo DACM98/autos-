@@ -51,12 +51,21 @@ const mongoOptions = {
     socketTimeoutMS: 45000,
 };
 
-mongoose.connect(process.env.MONGODB_URI, mongoOptions)
-    .then(() => console.log('Conectado a MongoDB Atlas'))
-    .catch(err => {
-        console.error('Error de conexión a MongoDB:', err);
-        process.exit(1); // Salir si no podemos conectar a la base de datos
-    });
+// Intentar conectar a MongoDB con reintentos para mayor robustez en entornos cloud
+const connectWithRetry = () => {
+    console.log('Intentando conectar a MongoDB...');
+    mongoose.connect(process.env.MONGODB_URI, mongoOptions)
+        .then(() => {
+            console.log('Conectado a MongoDB exitosamente');
+        })
+        .catch(err => {
+            console.error('Error de conexión a MongoDB:', err);
+            console.log('Reintentando en 5 segundos...');
+            setTimeout(connectWithRetry, 5000); // Reintentar después de 5 segundos
+        });
+};
+
+connectWithRetry();
 
 app.get('/', (req, res) => {
     res.send('API Autos funcionando');
